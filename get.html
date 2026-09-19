@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Téléchargement de la silhouette</title>
+<style>
+html,body{margin:0;height:100%;font-family:Arial,Helvetica,sans-serif;background:#fafafa;color:#222}
+body{display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box}
+#c{max-width:440px;width:100%;background:#fff;border:1px solid #eee;border-radius:14px;
+   padding:26px 26px 22px;box-shadow:0 8px 30px rgba(0,0,0,.07);text-align:center}
+h1{margin:0 0 4px;font-size:18px;font-style:italic;font-weight:normal}
+p{margin:0 0 16px;font-size:13px;color:#666;line-height:1.5}
+img{display:block;width:100%;max-height:180px;object-fit:contain;margin:0 0 18px}
+a.btn{display:inline-block;font-size:13px;padding:10px 16px;border-radius:8px;
+  background:#222;color:#fff;text-decoration:none;border:1px solid #222}
+a.btn:hover{background:#000}
+#astuce{margin:16px 0 0;font-size:12px;color:#444;line-height:1.5}
+small{display:block;margin-top:14px;font-size:11px;color:#999}
+</style></head><body>
+<div id="c">
+  <h1 id="nom">…</h1>
+  <p id="msg">Préparation du fichier…</p>
+  <img id="apercu" alt="">
+  <a id="lien" class="btn" href="#" download>Enregistrer le fichier</a>
+  <p id="astuce">Rien ne s’est enregistré&nbsp;? Faites un <b>clic droit sur l’image</b> ci-dessus
+     &rarr; «&nbsp;Enregistrer l’image sous…&nbsp;». Cette méthode fonctionne toujours.</p>
+  <small>Silhouettes © Margot Michaud — vous pouvez fermer cet onglet.</small>
+</div>
+<script>
+(function(){
+  var nom=document.getElementById('nom'), msg=document.getElementById('msg'),
+      img=document.getElementById('apercu'), lien=document.getElementById('lien');
+  /* nom de fichier passe en parametre : ?f=Lynx_lynx.svg
+     on n'accepte que des noms simples se terminant par .svg (pas de chemin) */
+  var f=new URLSearchParams(location.search).get('f')||'';
+  if(!/^[A-Za-z0-9_.\-]+\.svg$/.test(f)||f.indexOf('..')>=0){
+    nom.textContent='Fichier introuvable';
+    msg.textContent='Le nom de fichier demandé n’est pas valide.';
+    lien.style.display='none'; img.style.display='none'; return;
+  }
+  var url=new URL(f,location.href).href;
+  nom.textContent=f.replace(/_/g,' ').replace(/\.svg$/,'');
+  img.src=url; lien.href=url; lien.setAttribute('download',f);
+
+  /* cette page n'est PAS dans un cadre verrouille : le telechargement
+     automatique y fonctionne normalement. */
+  fetch(url).then(function(r){ if(!r.ok) throw 0; return r.blob(); }).then(function(b){
+    var u=URL.createObjectURL(b), a=document.createElement('a');
+    a.href=u; a.download=f; document.body.appendChild(a); a.click(); a.remove();
+    lien.href=u;
+    msg.innerHTML='Téléchargement lancé.';
+    setTimeout(function(){ URL.revokeObjectURL(u); },60000);
+  }).catch(function(){
+    msg.textContent='Cliquez sur le bouton pour enregistrer le fichier.';
+  });
+})();
+</script></body></html>
