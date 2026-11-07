@@ -15,15 +15,19 @@ h1{margin:0 0 2px;font-size:20px;letter-spacing:2px;color:#333}
 #q:focus{outline:none;border-color:#888}
 #flt{font:inherit;font-size:13px;padding:7px 9px;border:1px solid #ccc;border-radius:8px;background:#fff;max-width:100%}
 #count{font-size:12px;color:#888;white-space:nowrap}
-main{flex:1;overflow-y:auto;padding:6px 18px 24px}
+main{flex:1;overflow-y:auto;padding:10px 18px 12px}
+#pager{display:flex;gap:4px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+#pager button{font:inherit;font-size:12px;min-width:30px;padding:5px 8px;border:1px solid #ccc;border-radius:6px;background:#fff;cursor:pointer}
+#pager button.on{background:#222;color:#fff;border-color:#222}
+#pager button:disabled{opacity:.35;cursor:default}
 h2{font-size:14px;font-weight:bold;color:#555;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}
 h2 span{font-weight:normal;color:#aaa;font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
-.card{border:1px solid #eee;border-radius:10px;padding:8px 6px 7px;text-align:center;cursor:pointer;background:#fff;transition:border-color .15s,box-shadow .15s}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
+.card{border:1px solid #eee;border-radius:8px;padding:6px 4px 5px;text-align:center;cursor:pointer;background:#fff;transition:border-color .15s,box-shadow .15s}
 .card:hover{border-color:#bbb;box-shadow:0 3px 12px rgba(0,0,0,.08)}
-.card img{display:block;width:100%;height:72px;object-fit:contain;margin-bottom:6px}
-.card .n{font-size:11.5px;line-height:1.3;font-style:italic;word-break:break-word}
-.card .e{font-size:10.5px;color:#888;line-height:1.25;margin-top:2px}
+.card img{display:block;width:100%;height:54px;object-fit:contain;margin-bottom:6px}
+.card .n{font-size:10.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;word-break:break-word}
+.card .e{display:none}
 .dom .card .n{font-style:normal}
 .x{font-style:normal;font-weight:bold;margin-right:2px}
 #empty{display:none;color:#999;font-size:13px;padding:30px 0;text-align:center}
@@ -49,8 +53,8 @@ h2 span{font-weight:normal;color:#aaa;font-size:12px}
     <span id="count"></span>
   </div>
 </header>
-<main id="main"><div id="list"></div><div id="empty">Aucune silhouette ne correspond.</div>
-<p id="legend">Races de chiens selon la nomenclature FCI (numéro de standard indiqué).</p></main>
+<main id="main"><div id="list"></div><div id="empty">Aucune silhouette ne correspond.</div><div id="pager"></div>
+<p id="legend" style="margin-top:8px">Races de chiens selon la nomenclature FCI (numéro de standard affiché au survol).</p></main>
 <div id="tip"></div><div id="big"><img alt=""><div id="cap"></div></div>
 <script>
 (function(){
@@ -62,7 +66,7 @@ const WILD=[];
 const list=document.getElementById('list'),q=document.getElementById('q'),flt=document.getElementById('flt'),
       cnt=document.getElementById('count'),empty=document.getElementById('empty'),tip=document.getElementById('tip'),
       big=document.getElementById('big'),bigImg=big.querySelector('img'),legend=document.getElementById('legend');
-let tab='dog';
+let tab='dog',page=0;const PER=36;const pager=document.getElementById('pager');
 const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function items(){
   if(tab==='wild') return WILD.map(r=>({f:r[0],t:r[1],x:r[2],g:r[3],key:norm(r[1]+' '+r[3])}));
@@ -87,9 +91,11 @@ function render(){
   empty.style.display=it.length?'none':'block';
   legend.style.display=(tab==='wild'||tab==='dog')?'block':'none';
   list.className=tab==='wild'?'':'dom';
+  if(tab!=='wild') it.sort((a,b)=>a.t.localeCompare(b.t,'fr'));
+  const np=Math.max(1,Math.ceil(it.length/PER)); if(page>=np) page=np-1;
+  it=it.slice(page*PER,(page+1)*PER);
   const groups=[];const byG={};
   it.forEach(o=>{ if(!byG[o.g]){byG[o.g]=[];groups.push(o.g);} byG[o.g].push(o); });
-  if(tab!=='wild') it.sort((a,b)=>a.t.localeCompare(b.t,'fr'));
   let h='';
   groups.forEach(g=>{
     const arr=byG[g];
@@ -97,16 +103,22 @@ function render(){
     h+='<div class="grid">'+arr.map(o=>{
       const name=(o.x?'<span class="x">†</span>':'')+esc(o.t);
       const sub=o.e&&o.e.toLowerCase()!==o.t.toLowerCase()?'<div class="e">'+esc(o.e)+(o.fci?' · FCI '+o.fci:'')+'</div>':(o.fci?'<div class="e">FCI '+o.fci+'</div>':'');
-      return '<div class="card" data-f="'+esc(o.f)+'" data-l="'+esc((o.x?'† ':'')+o.t)+'"><img loading="lazy" alt="'+esc(o.t)+'" src="'+BASE+encodeURI(o.f)+'.svg"><div class="n">'+name+'</div>'+sub+'</div>';
+      return '<div class="card" data-f="'+esc(o.f)+'" data-l="'+esc((o.x?'† ':'')+o.t+(o.e&&o.e.toLowerCase()!==o.t.toLowerCase()?' ('+o.e+')':'')+(o.fci?' · FCI '+o.fci:''))+'"><img loading="lazy" alt="'+esc(o.t)+'" src="'+BASE+encodeURI(o.f)+'.svg"><div class="n">'+name+'</div>'+sub+'</div>';
     }).join('')+'</div>';
   });
   list.innerHTML=h; document.getElementById('main').scrollTop=0;
+  let p='';
+  if(np>1){p+='<button data-p="'+(page-1)+'"'+(page?'':' disabled')+'>‹</button>';
+    for(let k=0;k<np;k++) p+='<button data-p="'+k+'"'+(k===page?' class="on"':'')+'>'+(k+1)+'</button>';
+    p+='<button data-p="'+(page+1)+'"'+(page<np-1?'':' disabled')+'>›</button>';}
+  pager.innerHTML=p;
 }
 document.querySelectorAll('#tabs button').forEach(b=>b.onclick=()=>{
   document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('on',x===b));
-  tab=b.dataset.t; q.value=''; setFilter(); render();
+  tab=b.dataset.t; q.value=''; page=0; setFilter(); render();
 });
-q.addEventListener('input',render); flt.addEventListener('change',render);
+pager.addEventListener('click',e=>{const b=e.target.closest('button');if(!b||b.disabled)return;page=+b.dataset.p;render();});
+q.addEventListener('input',()=>{page=0;render();}); flt.addEventListener('change',render);
 
 /* survol : apercu agrandi + info-bulle ; clic : telechargement via get.html */
 list.addEventListener('mouseover',e=>{const c=e.target.closest('.card'); if(!c) return;
