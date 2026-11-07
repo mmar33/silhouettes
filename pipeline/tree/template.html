@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phylogénie des Carnivora</title>
+<style>
+html,body{margin:0;height:100%;background:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+#wrap{position:relative;width:100%;height:100%;cursor:grab;touch-action:none}
+#wrap.drag{cursor:grabbing}
+#tree{width:100%;height:100%;display:block}
+.sil{cursor:pointer}
+.sil .hit{fill:transparent}
+#zoomLayer{pointer-events:none}
+#zoomLayer use{transition:transform .18s ease-out;filter:drop-shadow(0 0 6px rgba(0,0,0,.25))}
+#zoomBg{fill:#fff;opacity:0;transition:opacity .18s}
+text.on{font-weight:bold;fill:#000!important}
+#tip{position:fixed;pointer-events:none;background:rgba(30,30,30,.9);color:#fff;padding:6px 10px;border-radius:6px;font-size:13px;line-height:1.35;display:none;z-index:9;white-space:nowrap}
+#tip i{font-size:14px}#tip span{opacity:.75;font-size:11px}
+#ctrl{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:5}
+#ctrl button{width:36px;height:36px;border:1px solid #ccc;background:#fff;border-radius:8px;font-size:18px;cursor:pointer;color:#333}
+#ctrl button:hover{background:#f2f2f2}
+
+/* ---- message de secours si le téléchargement automatique est bloqué ---- */
+#toast{position:fixed;left:12px;bottom:12px;max-width:min(320px,80vw);background:#222;color:#fff;
+  padding:10px 13px;border-radius:8px;font-size:12.5px;line-height:1.4;cursor:pointer;z-index:25;
+  display:none;box-shadow:0 6px 20px rgba(0,0,0,.28)}
+#toast.on{display:block}
+#toast b{text-decoration:underline}
+
+/* ---- panneau de téléchargement manuel ---- */
+#dlbox{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:30;display:none;align-items:center;justify-content:center}
+#dlbox.on{display:flex}
+#dlcard{position:relative;background:#fff;border-radius:12px;padding:20px 22px 18px;width:min(430px,88vw);
+  box-shadow:0 12px 44px rgba(0,0,0,.35);color:#222;font-size:14px}
+#dlcard h3{margin:0 0 6px;font-size:16px;font-style:italic;font-weight:normal;padding-right:24px}
+#dlcard p{margin:0 0 14px;font-size:12.5px;color:#666;line-height:1.45}
+#dlrow{display:flex;flex-wrap:wrap;gap:8px}
+#dlcard a.btn,#dlcard button.btn{font:inherit;font-size:13px;padding:9px 13px;border-radius:8px;
+  border:1px solid #ccc;background:#fff;color:#222;cursor:pointer;text-decoration:none;display:inline-block}
+#dlcard #dlopen{background:#222;color:#fff;border-color:#222}
+#dlcard button.btn:hover{background:#f2f2f2}
+#dlimg{display:block;width:100%;max-height:170px;object-fit:contain;margin:12px 0 8px;
+  background:#fafafa;border:1px solid #eee;border-radius:8px;padding:6px;box-sizing:border-box}
+#dlhint{margin:0 0 14px!important;font-size:12px!important;color:#444;line-height:1.45}
+#dlmsg{margin:0!important}
+#dlsrc{width:100%;height:120px;margin-top:12px;font-family:monospace;font-size:11px;display:none;
+  border:1px solid #ddd;border-radius:6px;padding:6px;box-sizing:border-box}
+#dlclose{position:absolute;top:8px;right:10px;border:0;background:none;font-size:22px;line-height:1;
+  color:#999;cursor:pointer;padding:2px 6px}
+#dlclose:hover{color:#333}
+</style></head><body>
+<div id="wrap"><svg id="tree"></svg>
+<div id="ctrl"><button id="zin" title="Zoomer">+</button><button id="zout" title="Dézoomer">−</button><button id="zreset" title="Vue entière">⟲</button></div>
+</div>
+<div id="tip"></div>
+<div id="toast"></div>
+<div id="dlbox">
+  <div id="dlcard">
+    <button id="dlclose" title="Fermer">&times;</button>
+    <h3 id="dlname"></h3>
+    <p id="dlmsg"></p>
+    <img id="dlimg" alt="">
+    <p id="dlhint"><b>Clic droit sur l'aperçu</b> &rarr; « Enregistrer l'image sous… »
+       — cette méthode fonctionne partout, même quand le site bloque les téléchargements.</p>
+    <div id="dlrow">
+      <button id="dlopen" class="btn" type="button">Ouvrir dans un onglet</button>
+      <a id="dlsave" class="btn" href="#" download>Enregistrer le SVG</a>
+      <button id="dlcopy" class="btn" type="button">Copier le code SVG</button>
+    </div>
+    <textarea id="dlsrc" readonly spellcheck="false"></textarea>
+  </div>
+</div>
+</div>
+<script>
+(function(){
+/* =======================================================================
+   ADRESSE DES SILHOUETTES HEBERGEES EN LIGNE  (recommande pour Wix)
+   -----------------------------------------------------------------------
+   Wix (comme Google Sites ou Notion) enferme les blocs "Integrer un code"
+   dans un cadre verrouille : AUCUN telechargement declenche par la page ne
+   peut en sortir. La parade est de deposer les 273 fichiers .svg quelque
+   part en ligne, puis d'indiquer ici l'adresse de leur dossier : un clic
+   ouvre alors le vrai fichier dans un nouvel onglet, que le visiteur
+   enregistre normalement (Ctrl+S / Cmd+S).
+
+   Exemple :  const BASE='https://mon-compte.github.io/silhouettes/';
+   Ne pas oublier la barre oblique finale.
+   Laisser vide ('') pour conserver la generation du fichier a la volee.
+   ======================================================================= */
+const BASE='https://mmar33.github.io/silhouettes/';
+
+/* Mettre false si le fichier get.html n'a PAS ete depose dans ce meme dossier
+   (dans ce cas le clic ouvre directement le .svg, a enregistrer par Ctrl+S). */
+const RELAIS=true;
+
+const svg=document.getElementById('tree'), NS='http://www.w3.org/2000/svg', XLINK='http://www.w3.org/1999/xlink';
+const wrap=document.getElementById('wrap'), tip=document.getElementById('tip');
+const full=svg.viewBox.baseVal; const V0=[full.x,full.y,full.width,full.height]; let V=V0.slice();
+function setVB(){svg.setAttribute('viewBox',V.join(' '));}
+
+/* ---------- calque de survol (silhouette agrandie) ---------- */
+const zl=document.createElementNS(NS,'g'); zl.id='zoomLayer'; svg.appendChild(zl);
+const bg=document.createElementNS(NS,'circle'); bg.id='zoomBg'; zl.appendChild(bg);
+const use=document.createElementNS(NS,'use'); zl.appendChild(use);
+
+/* ---------- zone cliquable + evenements pour chaque silhouette ---------- */
+const sils=[...svg.querySelectorAll('g.sil')];
+sils.forEach(g=>{
+  const art=g.querySelector('.art'); if(!art) return;
+  let b; try{ b=art.getBBox(); }catch(e){ return; }   // si le SVG n'est pas rendu, on ignore
+  if(!b.width&&!b.height) return;
+  g._bb=b;
+  const r=document.createElementNS(NS,'rect'); r.setAttribute('class','hit');
+  const p=Math.max(b.width,b.height)*0.08;
+  r.setAttribute('x',b.x-p);r.setAttribute('y',b.y-p);
+  r.setAttribute('width',b.width+2*p);r.setAttribute('height',b.height+2*p);
+  g.insertBefore(r,art);
+
+  g.addEventListener('pointerenter',e=>{ if(e.pointerType!=='touch') show(g,e); });
+  g.addEventListener('pointermove',moveTip);
+  g.addEventListener('pointerleave',hide);
+  g.addEventListener('click',e=>{ if(!moved) ask(g,e); });
+
+  const n=document.getElementById('n_'+g.id.slice(4));
+  if(n){ g._n=n; n.style.cursor='pointer';
+    n.addEventListener('pointerenter',e=>{ if(e.pointerType!=='touch') show(g,e); });
+    n.addEventListener('pointermove',moveTip);
+    n.addEventListener('pointerleave',hide);
+    n.addEventListener('click',e=>{ if(!moved) ask(g,e); });
+  }
+});
+
+/* ---------- survol ---------- */
+let cur=null;
+function show(g,e){
+  cur=g; const cx=+g.dataset.cx, cy=+g.dataset.cy;
+  const rect=g.querySelector('.art').getBoundingClientRect();
+  const target=Math.min(220, Math.min(wrap.clientWidth,wrap.clientHeight)*0.35);
+  const k=Math.max(1.5, target/Math.max(rect.width,rect.height,1));
+  use.setAttribute('href','#'+g.id); use.setAttributeNS(XLINK,'href','#'+g.id);
+  use.style.transformOrigin=cx+'px '+cy+'px'; use.style.transform='scale(1)';
+  const ctm=g.getCTM(), sc=Math.hypot(ctm.a,ctm.b), svgs=svg.getScreenCTM(), ss=Math.hypot(svgs.a,svgs.b);
+  bg.setAttribute('cx',cx); bg.setAttribute('cy',cy);
+  bg.setAttribute('r',Math.max(g._bb.width,g._bb.height)*sc/ss*k*0.62);
+  requestAnimationFrame(()=>{ if(cur===g){use.style.transform='scale('+k+')'; bg.style.opacity=.92;} });
+  if(g._n) g._n.classList.add('on');
+  tip.innerHTML='<i>'+g.dataset.name+'</i><br><span>Cliquer pour télécharger (SVG)</span>';
+  tip.style.display='block'; moveTip(e);
+}
+function hide(){
+  if(cur&&cur._n)cur._n.classList.remove('on');
+  cur=null; use.style.transform='scale(1)'; bg.style.opacity=0; tip.style.display='none';
+  setTimeout(()=>{ if(!cur){ use.removeAttribute('href'); use.removeAttributeNS(XLINK,'href'); } },180);
+}
+function moveTip(e){
+  let x=e.clientX+16,y=e.clientY+16;
+  if(x+tip.offsetWidth>innerWidth-8)x=e.clientX-tip.offsetWidth-16;
+  if(y+tip.offsetHeight>innerHeight-8)y=e.clientY-tip.offsetHeight-16;
+  tip.style.left=x+'px'; tip.style.top=y+'px';
+}
+
+/* =========================================================
+   TELECHARGEMENT
+   ========================================================= */
+
+/* Construit le fichier SVG d'une silhouette (XMLSerializer : plus fiable
+   que innerHTML sur des noeuds SVG selon les navigateurs). */
+function buildSVG(g){
+  const art=g.querySelector('.art'), b=g._bb, p=Math.max(b.width,b.height)*0.04;
+  const name=g.dataset.name||g.id;
+  const ser=new XMLSerializer();
+  let inner=''; for(const ch of art.childNodes) inner+=ser.serializeToString(ch);
+  const w=Math.round((b.width+2*p)*4), h=Math.round((b.height+2*p)*4);
+  const vb=[b.x-p,b.y-p,b.width+2*p,b.height+2*p].map(v=>+v.toFixed(3)).join(' ');
+  const txt='<?xml version="1.0" encoding="UTF-8"?>\n'+
+    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="'+XLINK+'" '+
+    'viewBox="'+vb+'" width="'+w+'" height="'+h+'">\n'+
+    '<title>'+name+' — silhouette © Margot Michaud</title>\n'+inner+'\n</svg>\n';
+  return {txt:txt, file:name.replace(/\s+/g,'_')+'.svg', name:name};
+}
+
+/* Le telechargement automatique est BLOQUE par le navigateur quand la page
+   est affichee dans une iframe "sandbox" sans l'autorisation allow-downloads
+   (cas des modules "code HTML" de Wix, Google Sites, Notion...).
+   -> true  : autorise ;  false : bloque a coup sur ;  null : inconnu. */
+function dlAllowed(){
+  if(window.self===window.top) return true;
+  try{
+    const fe=window.frameElement;                 // null si iframe cross-origin
+    if(fe){
+      if(!fe.hasAttribute('sandbox')) return true;
+      const s=fe.getAttribute('sandbox')||'';
+      return /(^|\s)allow-downloads(\s|$)/.test(s);
+    }
+  }catch(e){}
+  return null;
+}
+
+let lastURL=null;
+function makeURL(txt){
+  if(lastURL){ URL.revokeObjectURL(lastURL); lastURL=null; }
+  try{ lastURL=URL.createObjectURL(new Blob([txt],{type:'image/svg+xml;charset=utf-8'})); }
+  catch(e){ lastURL='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(txt); }
+  return lastURL;
+}
+
+/* Point d'entree du clic :
+   on tente TOUJOURS le telechargement direct (c'est le cas normal) ;
+   si la page est dans une iframe, on affiche en plus un petit bandeau
+   discret qui donne acces aux solutions de secours. */
+function ask(g,e){
+  const d=buildSVG(g), url=makeURL(d.txt);
+  if(BASE){                                  // fichiers heberges en ligne
+    d.direct=BASE+(RELAIS?'get.html?f='+encodeURIComponent(d.file):encodeURIComponent(d.file));
+    const w=window.open(d.direct,'_blank');
+    if(!w) openBox(d,url);                   // fenetres surgissantes bloquees
+    return;
+  }
+  const perm=dlAllowed();
+  tryDownload(url,d.file);
+  if(perm!==true) toast(d,url);
+}
+
+function tryDownload(url,file){
+  const a=document.createElement('a'); a.href=url; a.download=file; a.rel='noopener';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+/* ---------- petit message de secours (iframe) ---------- */
+let tt=null;
+function toast(d,url){
+  clearTimeout(tt);
+  const el=document.getElementById('toast');
+  el.innerHTML='Téléchargement lancé. Rien ne se passe&nbsp;? <b>Cliquez ici</b>.';
+  el.classList.add('on');
+  el.onclick=()=>{ el.classList.remove('on'); openBox(d,url); };
+  tt=setTimeout(()=>el.classList.remove('on'),9000);
+}
+
+/* ---------- panneau de telechargement manuel ---------- */
+const box=document.getElementById('dlbox'), boxT=document.getElementById('dlname'),
+      boxA=document.getElementById('dlsave'), boxTa=document.getElementById('dlsrc');
+const boxM=document.getElementById('dlmsg');
+function openBox(d,url){
+  hide();
+  boxT.textContent=d.name;
+  boxM.innerHTML = d.direct
+    ? 'Votre navigateur a bloqué l’ouverture de l’onglet de téléchargement. Autorisez les fenêtres surgissantes pour ce site, ou utilisez une des solutions ci-dessous.'
+    : "Si le fichier ne s'est pas enregistré, le site bloque les téléchargements automatiques dans cette page. Utilisez l'une des solutions ci-dessous.";
+  if(d.direct){ boxA.href=d.direct; boxA.setAttribute('target','_blank'); boxA.removeAttribute('download'); }
+  else { boxA.href=url; boxA.removeAttribute('target'); boxA.setAttribute('download',d.file); }
+  boxTa.value=d.txt; boxTa.style.display='none';
+  /* apercu : un clic droit > "Enregistrer l'image sous..." fonctionne meme
+     quand le telechargement par script est interdit (c'est le navigateur,
+     et non la page, qui declenche l'enregistrement). */
+  document.getElementById('dlimg').src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(d.txt);
+  box.classList.add('on'); box._d=d; box._url=url;
+}
+function closeBox(){ box.classList.remove('on'); }
+document.getElementById('dlclose').onclick=closeBox;
+box.addEventListener('click',e=>{ if(e.target===box) closeBox(); });
+document.getElementById('dlopen').onclick=()=>{
+  const w=window.open(box._d.direct||box._url,'_blank','noopener');
+  if(!w){ boxTa.style.display='block'; boxTa.select(); }
+};
+document.getElementById('dlcopy').onclick=()=>{
+  const t=box._d.txt, btn=document.getElementById('dlcopy');
+  const ok=()=>{ btn.textContent='Copié ✓'; setTimeout(()=>btn.textContent='Copier le code SVG',1800); };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(ok,()=>{ boxTa.style.display='block'; boxTa.select(); });
+  }else{ boxTa.style.display='block'; boxTa.select(); try{document.execCommand('copy');ok();}catch(e){} }
+};
+addEventListener('keydown',e=>{ if(e.key==='Escape') closeBox(); });
+
+/* =========================================================
+   ZOOM / DEPLACEMENT
+   ========================================================= */
+function zoom(f,cx,cy){
+  if(cx===undefined){cx=V[0]+V[2]/2;cy=V[1]+V[3]/2;}
+  let w=Math.min(V0[2],Math.max(V0[2]/12,V[2]*f)); const r=w/V[2];
+  V=[cx-(cx-V[0])*r, cy-(cy-V[1])*r, w, V[3]*r]; clamp(); setVB();
+}
+function clamp(){
+  V[0]=Math.min(Math.max(V[0],V0[0]-V[2]/2),V0[0]+V0[2]-V[2]/2);
+  V[1]=Math.min(Math.max(V[1],V0[1]-V[3]/2),V0[1]+V0[3]-V[3]/2);
+}
+document.getElementById('zin').onclick=()=>zoom(1/1.5);
+document.getElementById('zout').onclick=()=>zoom(1.5);
+document.getElementById('zreset').onclick=()=>{V=V0.slice();setVB();};
+svg.addEventListener('wheel',e=>{
+  if(!(e.ctrlKey||e.metaKey||V[2]<V0[2]))return;
+  e.preventDefault(); const pt=toSvg(e); zoom(e.deltaY>0?1.15:1/1.15,pt.x,pt.y);
+},{passive:false});
+function toSvg(e){const p=svg.createSVGPoint();p.x=e.clientX;p.y=e.clientY;return p.matrixTransform(svg.getScreenCTM().inverse());}
+/* unites SVG par pixel ecran : correct meme si le cadre n'est pas carre */
+function unitsPerPx(){ const m=svg.getScreenCTM(); return m?1/Math.hypot(m.a,m.b):V[2]/Math.max(svg.clientWidth,1); }
+
+let drag=null, moved=false;
+wrap.addEventListener('pointerdown',e=>{
+  if(e.target.closest('#ctrl')||e.target.closest('#dlbox'))return;
+  drag={x:e.clientX,y:e.clientY,v:V.slice(),s:unitsPerPx()}; moved=false;
+});
+addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-drag.x, dy=e.clientY-drag.y;
+  if(!moved){ if(Math.abs(dx)+Math.abs(dy)<=4) return; moved=true; wrap.classList.add('drag'); }
+  V[0]=drag.v[0]-dx*drag.s; V[1]=drag.v[1]-dy*drag.s; clamp(); setVB();
+});
+addEventListener('pointerup',()=>{ drag=null; wrap.classList.remove('drag'); });
+addEventListener('pointercancel',()=>{ drag=null; moved=false; wrap.classList.remove('drag'); });
+})();
+</script></body></html>
