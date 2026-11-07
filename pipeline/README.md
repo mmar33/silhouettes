@@ -6,14 +6,14 @@ Ce dossier sert à mettre à jour automatiquement la page `scar.html` (arbre cir
 - Fichier maître des silhouettes (ordinateur de Margot, Dropbox) :
   `C:\Users\mmar3\M.mar33 Dropbox\Margot Michaud\Dossier pro\Illustrations\Phylopic\Phylopic.svg`
   Chaque silhouette a son nom d'espèce écrit en dessous (flowRoot).
-- Races domestiques : tableau de lignes (nom français, nom anglais, n° FCI) avec l'icône à gauche (voir `work/domrows.py`, `work/build_dom.py`).
+- Races domestiques : fichier `Phylopic - domestic.svg` dans le même dossier, tableau de lignes (nom français, nom anglais, n° FCI) avec l'icône à gauche (voir `work/domrows.py`, `work/build_dom.py`).
 - Arbre : Upham et al. 2019 (`tree/carnivora_upham.nwk`), espèces nouvelles et fossiles greffés à la main dans `tree/build_tree.py`, âges dans `tree/ages.py` (Paleobiology Database).
 
 ## État
 - `work/wild_index.json` : silhouettes sauvages et fossiles déjà publiées (nom, fichier, éteint ou non, famille).
 - `work/dom_index.json` : silhouettes domestiques déjà publiées.
 - `tree/old_art.json` : silhouettes historiques (273, couleurs d'origine).
-- `state.json` : date de modification de Phylopic.svg au dernier passage.
+- `state.json` : dates de modification (mtimeMs) de Phylopic.svg et de « Phylopic - domestic.svg » au dernier passage, et points en suspens.
 
 ## Ajouter de nouvelles silhouettes
 1. Récupérer Phylopic.svg, lancer `work/extract_master.py` puis `work/match2.py` (associe chaque silhouette à son nom).
