@@ -31,20 +31,23 @@ small{display:block;margin-top:14px;font-size:11px;color:#999}
   /* nom de fichier passe en parametre : ?f=Lynx_lynx.svg
      on n'accepte que des noms simples se terminant par .svg (pas de chemin) */
   var f=new URLSearchParams(location.search).get('f')||'';
-  if(!/^[A-Za-z0-9_.\-]+\.svg$/.test(f)||f.indexOf('..')>=0){
+  if(!/^([A-Za-z0-9_\-]+\/){0,3}[A-Za-z0-9_.\-]+\.svg$/.test(f)||f.indexOf('..')>=0){
     nom.textContent='Fichier introuvable';
     msg.textContent='Le nom de fichier demandé n’est pas valide.';
     lien.style.display='none'; img.style.display='none'; return;
   }
   var url=new URL(f,location.href).href;
-  nom.textContent=f.replace(/_/g,' ').replace(/\.svg$/,'');
-  img.src=url; lien.href=url; lien.setAttribute('download',f);
+  var court=f.split('/').pop();
+  nom.textContent=court.replace(/_/g,' ').replace(/\.svg$/,'');
+  img.src=url; lien.href=url; lien.setAttribute('download',court);
 
   /* cette page n'est PAS dans un cadre verrouille : le telechargement
      automatique y fonctionne normalement. */
-  fetch(url).then(function(r){ if(!r.ok) throw 0; return r.blob(); }).then(function(b){
+  fetch(url).then(function(r){ if(!r.ok) throw 0; return r.text(); }).then(function(t){
+    var m=t.match(/<title>([^<]*?) \u2014 silhouette/); if(m) nom.textContent=m[1].replace(/&amp;/g,'&');
+    var b=new Blob([t],{type:'image/svg+xml'});
     var u=URL.createObjectURL(b), a=document.createElement('a');
-    a.href=u; a.download=f; document.body.appendChild(a); a.click(); a.remove();
+    a.href=u; a.download=court; document.body.appendChild(a); a.click(); a.remove();
     lien.href=u;
     msg.innerHTML='Téléchargement lancé.';
     setTimeout(function(){ URL.revokeObjectURL(u); },60000);
