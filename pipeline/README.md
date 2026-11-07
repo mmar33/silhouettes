@@ -22,7 +22,7 @@ Ce dossier sert à mettre à jour automatiquement la page `scar.html` (arbre cir
 4. Écrire les SVG (noir, détails blancs conservés, `<title>{nom} — silhouette © Margot Michaud (CC0)</title>`, préfixe `† ` pour les éteints) à la racine du dépôt, ou dans `domestic/dogs|cats|other` ; ajouter les entrées dans les index (`work/build_wild.py`, `work/build_dom.py`).
 5. Placer chaque nouvelle espèce dans l'arbre : `sister(ref, nom)` pour une espèce actuelle proche d'une existante, `graft(mrca(...), G(Famille, nom))` pour un fossile, âge dans `tree/ages.py`. Famille dans `work/fam.py` si nouveau genre ; nouvelle famille fossile : ajouter une couleur dans `tree/bbox.py` (COL, n'importe laquelle, la couleur affichée vient du dégradé).
 6. `bash pipeline/build.sh` puis vérifier (`node tree/shot.js` si présent, ou capture Playwright) : 0 erreur JS, toutes les silhouettes, aucun chevauchement (`hits 0`).
-7. Commit + push sur `main` (GitHub Pages se met à jour en 1 à 2 minutes ; Wix suit tout seul).
+7. Commit + push sur `main` (push direct possible : application GitHub Claude installée sur le dépôt le 07/11/2026). GitHub Pages se met à jour en 1 à 2 minutes ; Wix suit tout seul.
 
 ## Rendu
 - Couleurs : une couleur par famille, dégradé OKLCH dans l'ordre des familles autour du cercle (fonction `fcol` dans `tree/render.py`).
