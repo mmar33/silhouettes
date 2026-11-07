@@ -66,11 +66,11 @@ main{flex:1;overflow-y:auto;padding:10px 18px 12px}
 #dpager button:disabled{opacity:.35;cursor:default}
 #dom h2{font-size:14px;font-weight:bold;color:#555;margin:20px 0 8px;padding-bottom:4px;border-bottom:1px solid #eee}
 #dom h2 span{font-weight:normal;color:#aaa;font-size:12px}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:6px}
-.card{border:1px solid #eee;border-radius:8px;padding:6px 4px 5px;text-align:center;cursor:pointer;background:#fff;transition:border-color .15s,box-shadow .15s}
-.card:hover{border-color:#bbb;box-shadow:0 3px 12px rgba(0,0,0,.08)}
-.card img{display:block;width:100%;height:54px;object-fit:contain;margin-bottom:6px}
-.card .n{font-size:10.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;word-break:break-word}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:2px 4px}
+.card{border:1px solid transparent;border-radius:6px;padding:4px 2px 3px;text-align:center;cursor:pointer;background:#fff;transition:border-color .15s,box-shadow .15s}
+.card:hover{border-color:#ddd;box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.card img{display:block;width:100%;height:30px;object-fit:contain;margin-bottom:6px}
+.card .n{font-size:9px;color:#666;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-style:italic;word-break:break-word}
 .card .e{display:none}
 .dom .card .n{font-style:normal}
 .x{font-style:normal;font-weight:bold;margin-right:2px}
@@ -373,7 +373,7 @@ const WILD=[];
 const list=document.getElementById('dlist'),q=document.getElementById('dq'),flt=document.getElementById('dflt'),
       cnt=document.getElementById('dcount'),empty=document.getElementById('dempty'),tip=document.getElementById('dtip'),
       big=document.getElementById('dbig'),bigImg=big.querySelector('img'),legend=document.getElementById('dlegend');
-let tab='dog',page=0;const PER=36;const pager=document.getElementById('dpager');
+let tab='dog',page=0;const PER=84;const pager=document.getElementById('dpager');
 const norm=s=>(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 function items(){
   if(tab==='wild') return WILD.map(r=>({f:r[0],t:r[1],x:r[2],g:r[3],key:norm(r[1]+' '+r[3])}));
