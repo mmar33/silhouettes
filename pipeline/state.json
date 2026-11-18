@@ -3,5 +3,9 @@
   "domestic_svg_mtime": 1793011633859,
   "derniere_maj": "2026-11-07",
   "note": "mtimeMs (device_list_dir) des deux fichiers maitres au moment de la derniere mise a jour du site",
-  "en_suspens": ["path421 : seconde silhouette de martre au-dessus d'un doublon de l'etiquette Martes transistoria, espece a confirmer par Margot"]
+  "en_suspens": [
+    "path421 : seconde silhouette de martre au-dessus d'un doublon de l'etiquette Martes transistoria, espece a confirmer par Margot"
+  ],
+  "phylopic_svg_hash": "5ddc8b9ee0f1501c43107db76764fac17b21885a6c308a74878f96c4571ee248",
+  "domestic_svg_hash": "04575ea4ad19d9e7c2a3975075ecd8a4fc8ae3abf151e7e3047ef82c08892085"
 }
